@@ -4,8 +4,8 @@
  * Ganti SUPABASE_URL dan SUPABASE_ANON_KEY dengan kredensial proyek Anda.
  * ============================================================================
  */
-const SUPABASE_URL = 'https://zcnbhcsbtdqvqhdlpgnn.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_9P9WfpK3amF_JCEoIg2JxQ_jZxFIRYc';
+const SUPABASE_URL = 'https://hpkdhmnpjwvljllvvyew.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_QtgYnR4GYItoMmicjt26pQ_EFCzzohz';
 
 const BUCKET_PRODUK = 'produk-images';
 
