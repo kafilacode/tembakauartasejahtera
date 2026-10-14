@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kasir (POS) & Inventori Toko Tembakau</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Courier Prime (untuk Struk) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- DataTables Bootstrap 5 CSS -->
+    <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.2/dist/sweetalert2.min.css" rel="stylesheet">
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="text-center text-white">
+            <div class="spinner-border text-gold mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+            <h6 class="fw-semibold" id="loadingText">Memuat data...</h6>
+        </div>
+    </div>
+
+    <div class="app-wrapper" id="appWrapper">
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-leaf"></i>
+                </div>
+                <div class="brand-text">
+                    <h6 class="mb-0 fw-bold text-gold" id="sidebarNamaToko">GARASI BAKO</h6>
+                    <small class="text-white-50" style="font-size: 0.72rem;">POS & Inventori Tembakau</small>
+                </div>
+                <button class="btn btn-sm text-white d-lg-none ms-auto" id="btnCloseSidebar">
+                    <i class="fa-solid fa-xmark fs-5"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-label">MENU UTAMA</div>
+                <a href="#" class="nav-item-link active" data-target="sec-dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item-link" data-target="sec-pos">
+                    <i class="fa-solid fa-cash-register"></i>
+                    <span>Kasir (POS)</span>
+                </a>
+                <a href="#" class="nav-item-link" data-target="sec-produk">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Data Produk & Stok</span>
+                </a>
+                <a href="#" class="nav-item-link" data-target="sec-stok">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span>Riwayat Stok (Opname)</span>
+                </a>
+                <a href="#" class="nav-item-link" data-target="sec-laporan">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                    <span>Laporan Transaksi</span>
+                </a>
+
+                <div class="menu-label mt-3">PELANGGAN & SISTEM</div>
+                <a href="#" class="nav-item-link" data-target="sec-katalog">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Katalog Publik</span>
+                </a>
+                <a href="#" class="nav-item-link" data-target="sec-pengaturan">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Pengaturan Toko</span>
+                </a>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="d-flex align-items-center justify-content-between small text-white-50">
+                    <span>Status Database:</span>
+                    <span id="dbStatusBadge" class="badge bg-secondary">Memeriksa...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            <!-- TOPBAR -->
+            <header class="topbar">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-outline-espresso d-lg-none" id="btnToggleSidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div>
+                        <h5 class="mb-0 fw-bold text-espresso" id="pageTitle">Dashboard Ringkasan</h5>
+                        <small class="text-muted" id="currentDateDisplay"></small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-gold fw-semibold" id="btnQuickPos">
+                        <i class="fa-solid fa-cart-plus me-1"></i> Buka Kasir
+                    </button>
+                    <button class="btn btn-sm btn-outline-espresso" id="btnRefreshData" title="Sinkronisasi Data">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-container">
+                
+                <!-- =========================================================
+                     1. MODUL DASHBOARD
+                ========================================================== -->
+                <section id="sec-dashboard" class="spa-section active">
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card stat-card border-0 shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <p class="text-muted small fw-semibold mb-1">OMZET HARI INI</p>
+                                        <h4 class="fw-bold text-espresso mb-0" id="statOmzetHariIni">Rp 0</h4>
+                                        <small class="text-success"><i class="fa-solid fa-calendar-day me-1"></i>Penjualan Bersih</small>
+                                    </div>
+                                    <div class="stat-icon bg-espresso text-gold">
+                                        <i class="fa-solid fa-sack-dollar"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card stat-card border-0 shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <p class="text-muted small fw-semibold mb-1">LABA KOTOR HARI INI</p>
+                                        <h4 class="fw-bold text-success mb-0" id="statLabaHariIni">Rp 0</h4>
+                                        <small class="text-muted">Omzet dikurangi HPP</small>
+                                    </div>
+                                    <div class="stat-icon bg-success-subtle text-success">
+                                        <i class="fa-solid fa-chart-line"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card stat-card border-0 shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <p class="text-muted small fw-semibold mb-1">TRANSAKSI HARI INI</p>
+                                        <h4 class="fw-bold text-espresso mb-0" id="statTransaksiHariIni">0 Nota</h4>
+                                        <small class="text-muted">Total struk tercetak</small>
+                                    </div>
+                                    <div class="stat-icon bg-warning-subtle text-warning-emphasis">
+                                        <i class="fa-solid fa-receipt"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="card stat-card border-0 shadow-sm h-100">
+                                <div class="card-body d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <p class="text-muted small fw-semibold mb-1">STOK MENIPIS</p>
+                                        <h4 class="fw-bold text-danger mb-0" id="statStokMenipis">0 Produk</h4>
+                                        <small class="text-danger">Perlu segera restock</small>
+                                    </div>
+                                    <div class="stat-icon bg-danger-subtle text-danger">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Peringatan Stok Menipis -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-danger p-2"><i class="fa-solid fa-bell"></i></span>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-espresso">Peringatan Stok Menipis / Habis</h6>
+                                    <small class="text-muted">Menampilkan daftar produk dengan stok saat ini kurang dari atau sama dengan batas minimum</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-espresso" id="btnKeRiwayatStok">
+                                <i class="fa-solid fa-truck-ramp-box me-1"></i> Buka Menu Restock
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" id="tableStokMenipis">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Kode</th>
+                                            <th>Nama Produk</th>
+                                            <th>Kategori</th>
+                                            <th class="text-center">Stok Saat Ini</th>
+                                            <th class="text-center">Batas Minimum</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Aksi Cepat</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyStokMenipis"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     2. MODUL KASIR (POINT OF SALE / POS)
+                ========================================================== -->
+                <section id="sec-pos" class="spa-section">
+                    <div class="row g-3">
+                        <!-- Kolom Kiri: Katalog Produk -->
+                        <div class="col-12 col-lg-7">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <!-- Bar Pencarian Cepat -->
+                                    <div class="input-group mb-3">
+                                        <span class="input-group-text bg-white border-end-0 text-muted">
+                                            <i class="fa-solid fa-magnifying-glass"></i>
+                                        </span>
+                                        <input type="text" id="posSearchInput" class="form-control border-start-0" placeholder="Cari nama tembakau, papir, filter, atau ketik kode produk...">
+                                        <button class="btn btn-outline-secondary" type="button" id="btnClearPosSearch">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Filter Tombol Kategori -->
+                                    <div class="category-pills-wrapper mb-3" id="posCategoryFilter">
+                                        <!-- Dirender secara dinamis dari JS -->
+                                    </div>
+
+                                    <!-- Grid Produk POS -->
+                                    <div class="row g-2 pos-product-grid" id="posProductGrid">
+                                        <!-- Dirender secara dinamis dari JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Kanan: Keranjang Belanja (Cart) -->
+                        <div class="col-12 col-lg-5">
+                            <div class="card border-0 shadow-sm pos-cart-card">
+                                <div class="card-header bg-espresso text-white py-3 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-gold"><i class="fa-solid fa-basket-shopping me-2"></i>Keranjang Transaksi</h6>
+                                        <small class="text-white-50" id="posCartCountText">0 Item dipilih</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-light" id="btnClearCart" title="Kosongkan Keranjang">
+                                        <i class="fa-solid fa-trash-can me-1"></i> Reset
+                                    </button>
+                                </div>
+
+                                <div class="card-body p-3">
+                                    <!-- Data Pelanggan (Opsional untuk WA Struk) -->
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold mb-1">Nama Pelanggan</label>
+                                            <input type="text" id="posNamaPelanggan" class="form-control form-control-sm" placeholder="Pelanggan Umum">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold mb-1">No. WhatsApp (Opsional)</label>
+                                            <input type="text" id="posWaPelanggan" class="form-control form-control-sm" placeholder="0812xxxxxxxx">
+                                        </div>
+                                    </div>
+
+                                    <!-- Daftar Item di Keranjang -->
+                                    <div class="cart-items-container mb-3" id="posCartItems">
+                                        <!-- Dirender secara dinamis dari JS -->
+                                    </div>
+
+                                    <!-- Kalkulasi Pembayaran -->
+                                    <div class="cart-summary bg-light p-3 rounded-3 border">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted small fw-semibold">Subtotal</span>
+                                            <span class="fw-bold" id="posSubtotalText">Rp 0</span>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small fw-semibold">Diskon Potongan (Rp)</span>
+                                            <div style="width: 150px;">
+                                                <input type="number" id="posDiskonInput" class="form-control form-control-sm text-end fw-semibold" value="0" min="0" step="500">
+                                            </div>
+                                        </div>
+
+                                        <hr class="my-2">
+
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="fw-bold text-espresso">TOTAL AKHIR</span>
+                                            <h4 class="fw-bold text-espresso mb-0" id="posTotalAkhirText">Rp 0</h4>
+                                        </div>
+
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-5">
+                                                <label class="form-label small fw-semibold mb-1">Metode Bayar</label>
+                                                <select id="posMetodeBayar" class="form-select form-select-sm fw-semibold">
+                                                    <option value="Tunai">Tunai</option>
+                                                    <option value="QRIS">QRIS</option>
+                                                    <option value="Transfer">Transfer</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-7">
+                                                <label class="form-label small fw-semibold mb-1">Uang Diterima (Rp)</label>
+                                                <input type="number" id="posUangDiterima" class="form-control form-control-sm text-end fw-bold" placeholder="0" min="0" step="1000">
+                                            </div>
+                                        </div>
+
+                                        <!-- Tombol Cepat Nominal Uang -->
+                                        <div class="d-flex flex-wrap gap-1 mb-3">
+                                            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill quick-cash-btn" data-cash="exact">Uang Pas</button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill quick-cash-btn" data-cash="20000">20.000</button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill quick-cash-btn" data-cash="50000">50.000</button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary flex-fill quick-cash-btn" data-cash="100000">100.000</button>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center p-2 rounded bg-white border mb-3">
+                                            <span class="small fw-semibold text-muted">Kembalian:</span>
+                                            <span class="fw-bold fs-6 text-success" id="posKembalianText">Rp 0</span>
+                                        </div>
+
+                                        <button type="button" class="btn btn-gold w-100 py-2 fw-bold fs-6 shadow-sm" id="btnProsesBayar">
+                                            <i class="fa-solid fa-check-circle me-2"></i>PROSES BAYAR & CETAK STRUK
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     3. MODUL DATA PRODUK & INVENTORI
+                ========================================================== -->
+                <section id="sec-produk" class="spa-section">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <h6 class="mb-0 fw-bold text-espresso">Master Data Produk & Inventori Tembakau</h6>
+                                <small class="text-muted">Kelola harga modal (HPP), harga ecer, harga grosir otomatis, dan foto produk</small>
+                            </div>
+                            <button class="btn btn-gold fw-semibold" id="btnTambahProduk">
+                                <i class="fa-solid fa-plus me-1"></i> Tambah Produk Baru
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle w-100" id="tableProduk">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Foto</th>
+                                            <th>Kode & Nama Produk</th>
+                                            <th>Kategori</th>
+                                            <th class="text-end">HPP (Modal)</th>
+                                            <th class="text-end">Harga Ecer</th>
+                                            <th class="text-end">Harga Grosir</th>
+                                            <th class="text-center">Stok</th>
+                                            <th class="text-end">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyProduk"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     4. MODUL RIWAYAT STOK (RESTOCK & STOCK OPNAME)
+                ========================================================== -->
+                <section id="sec-stok" class="spa-section">
+                    <div class="row g-3">
+                        <!-- Form Penyesuaian Stok -->
+                        <div class="col-12 col-lg-4">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-espresso text-white py-3">
+                                    <h6 class="mb-0 fw-bold text-gold"><i class="fa-solid fa-boxes-packing me-2"></i>Form Restock / Stock Opname</h6>
+                                    <small class="text-white-50">Otomatis memperbarui stok aktif di produk</small>
+                                </div>
+                                <div class="card-body">
+                                    <form id="formRiwayatStok">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Pilih Produk <span class="text-danger">*</span></label>
+                                            <select id="stokProdukId" class="form-select" required>
+                                                <option value="">-- Pilih Produk --</option>
+                                            </select>
+                                            <div class="form-text text-espresso fw-semibold" id="infoStokSaatIni">Stok saat ini: -</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Jenis Perubahan Stok <span class="text-danger">*</span></label>
+                                            <select id="stokJenisPerubahan" class="form-select" required>
+                                                <option value="RESTOCK">RESTOCK (Stok Masuk dari Supplier / +)</option>
+                                                <option value="OPNAME_KURANG">OPNAME KURANG (Penyusutan Bobot / Rusak / -)</option>
+                                                <option value="OPNAME_TAMBAH">OPNAME TAMBAH (Koreksi Stok Lebih / +)</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Jumlah Kuantitas <span class="text-danger">*</span></label>
+                                            <input type="number" id="stokJumlah" class="form-control" min="1" required placeholder="Masukkan angka (misal: 10)">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Keterangan / Alasan <span class="text-danger">*</span></label>
+                                            <textarea id="stokKeterangan" class="form-control" rows="3" required placeholder="Contoh: Restock supplier Temanggung / Susut kering penyimpanan"></textarea>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-gold w-100 fw-bold">
+                                            <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Perubahan Stok
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Riwayat Mutasi Stok -->
+                        <div class="col-12 col-lg-8">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-white py-3">
+                                    <h6 class="mb-0 fw-bold text-espresso">Log Riwayat Mutasi Stok (Restock & Opname)</h6>
+                                    <small class="text-muted">Catatan historis keluar-masuk barang di luar transaksi kasir</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle w-100" id="tableRiwayatStok">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Waktu</th>
+                                                    <th>Produk</th>
+                                                    <th>Jenis</th>
+                                                    <th class="text-center">Jumlah</th>
+                                                    <th class="text-center">Sebelum -> Sesudah</th>
+                                                    <th>Keterangan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbodyRiwayatStok"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     5. MODUL LAPORAN TRANSAKSI
+                ========================================================== -->
+                <section id="sec-laporan" class="spa-section">
+                    <!-- Filter Tanggal & Export -->
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-semibold mb-1">Tanggal Mulai</label>
+                                    <input type="date" id="filterTanggalMulai" class="form-control">
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label small fw-semibold mb-1">Tanggal Akhir</label>
+                                    <input type="date" id="filterTanggalAkhir" class="form-control">
+                                </div>
+                                <div class="col-12 col-md-3 d-flex gap-2">
+                                    <button class="btn btn-espresso flex-fill" id="btnFilterLaporan">
+                                        <i class="fa-solid fa-filter me-1"></i> Terapkan Filter
+                                    </button>
+                                    <button class="btn btn-outline-secondary" id="btnResetFilterLaporan" title="Reset Filter">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </button>
+                                </div>
+                                <div class="col-12 col-md-3 text-md-end">
+                                    <button class="btn btn-success fw-semibold w-100" id="btnExportExcel">
+                                        <i class="fa-solid fa-file-excel me-2"></i>Export ke Excel (.xlsx)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Periode Terfilter -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-dark">
+                                <small class="text-muted d-block">Total Nota (Periode)</small>
+                                <span class="fw-bold fs-5 text-espresso" id="lapTotalNota">0</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-warning">
+                                <small class="text-muted d-block">Total Omzet Bersih</small>
+                                <span class="fw-bold fs-5 text-espresso" id="lapTotalOmzet">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-danger">
+                                <small class="text-muted d-block">Total Diskon Diberikan</small>
+                                <span class="fw-bold fs-5 text-danger" id="lapTotalDiskon">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-white rounded shadow-sm border-start border-4 border-success">
+                                <small class="text-muted d-block">Total Laba Kotor</small>
+                                <span class="fw-bold fs-5 text-success" id="lapTotalLaba">Rp 0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Laporan Transaksi -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle w-100" id="tableLaporan">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>No. Nota</th>
+                                            <th>Tanggal & Waktu</th>
+                                            <th>Pelanggan</th>
+                                            <th>Metode</th>
+                                            <th class="text-end">Subtotal</th>
+                                            <th class="text-end">Diskon</th>
+                                            <th class="text-end">Total Akhir</th>
+                                            <th class="text-end">Laba Kotor</th>
+                                            <th class="text-end">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyLaporan"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     6. MODUL KATALOG PUBLIK (MODE PELANGGAN)
+                ========================================================== -->
+                <section id="sec-katalog" class="spa-section">
+                    <div class="card border-0 shadow-sm bg-espresso text-white mb-4 overflow-hidden">
+                        <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div>
+                                <span class="badge bg-gold text-espresso fw-bold mb-2">MENU KATALOG PELANGGAN</span>
+                                <h3 class="fw-bold text-gold mb-1" id="katalogNamaToko">GARASI BAKO & TINGWE</h3>
+                                <p class="text-white-50 mb-0" id="katalogSlogan">Spesialis Tembakau Nusantara & Flavour Premium</p>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-outline-light btn-sm" id="btnToggleFullscreenKatalog">
+                                    <i class="fa-solid fa-expand me-1"></i> Mode Layar Kios Pelanggan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter Katalog Publik -->
+                    <div class="row g-2 mb-3 align-items-center">
+                        <div class="col-12 col-md-5">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fa-solid fa-search text-muted"></i></span>
+                                <input type="text" id="katalogSearchInput" class="form-control" placeholder="Cari varian tembakau, papir, cengkeh...">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <div class="category-pills-wrapper" id="katalogCategoryFilter"></div>
+                        </div>
+                    </div>
+
+                    <!-- Grid Katalog Publik -->
+                    <div class="row g-3" id="katalogProductGrid"></div>
+                </section>
+
+                <!-- =========================================================
+                     7. MODUL PENGATURAN TOKO
+                ========================================================== -->
+                <section id="sec-pengaturan" class="spa-section">
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-7">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-white py-3">
+                                    <h6 class="mb-0 fw-bold text-espresso"><i class="fa-solid fa-store me-2 text-gold"></i>Identitas Toko & Format Struk</h6>
+                                    <small class="text-muted">Informasi ini akan tampil di Sidebar, Katalog Publik, dan Header/Footer Struk Thermal 58mm</small>
+                                </div>
+                                <div class="card-body">
+                                    <form id="formPengaturanToko">
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Nama Kedai / Toko Tembakau <span class="text-danger">*</span></label>
+                                            <input type="text" id="setNamaToko" class="form-control" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Slogan / Tagline Toko</label>
+                                            <input type="text" id="setSlogan" class="form-control">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Alamat Lengkap (Tampil di Struk) <span class="text-danger">*</span></label>
+                                            <textarea id="setAlamat" class="form-control" rows="2" required></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Nomor Telepon / WhatsApp Toko <span class="text-danger">*</span></label>
+                                            <input type="text" id="setNoTelepon" class="form-control" required placeholder="081234567890">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label small fw-semibold">Catatan Kaki Struk (Footer Struk)</label>
+                                            <textarea id="setCatatanStruk" class="form-control" rows="2"></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-gold fw-bold">
+                                            <i class="fa-solid fa-floppy-disk me-2"></i>Simpan Pengaturan Toko
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-5">
+                            <div class="card border-0 shadow-sm">
+                                <div class="card-header bg-white py-3">
+                                    <h6 class="mb-0 fw-bold text-espresso"><i class="fa-solid fa-tags me-2 text-gold"></i>Kelola Kategori Produk</h6>
+                                    <small class="text-muted">Tambah kategori baru jika diperlukan</small>
+                                </div>
+                                <div class="card-body">
+                                    <form id="formTambahKategori" class="d-flex gap-2 mb-3">
+                                        <input type="text" id="inputNamaKategoriBaru" class="form-control form-control-sm" placeholder="Nama kategori baru..." required>
+                                        <button type="submit" class="btn btn-sm btn-espresso text-nowrap">
+                                            <i class="fa-solid fa-plus me-1"></i> Tambah
+                                        </button>
+                                    </form>
+                                    <ul class="list-group list-group-flush small" id="listKategoriPengaturan"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- =========================================================
+         MODAL 1: CRUD PRODUK & KOMPRESI GAMBAR
+    ========================================================== -->
+    <div class="modal fade" id="modalProduk" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-espresso text-white">
+                    <h6 class="modal-title fw-bold text-gold" id="modalProdukTitle">Tambah Produk Baru</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="formProduk">
+                    <div class="modal-body">
+                        <input type="hidden" id="prodId">
+                        <input type="hidden" id="prodFotoUrlLama">
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold">Kode Produk / SKU <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" id="prodKode" class="form-control" required placeholder="TBK-001">
+                                    <button class="btn btn-outline-secondary" type="button" id="btnGenKode" title="Generate Kode Otomatis">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small fw-semibold">Nama Produk <span class="text-danger">*</span></label>
+                                <input type="text" id="prodNama" class="form-control" required placeholder="Contoh: Tembakau Mole Aroma Wine 50gr">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Kategori Produk <span class="text-danger">*</span></label>
+                                <select id="prodKategoriId" class="form-select" required></select>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Satuan Jual <span class="text-danger">*</span></label>
+                                <select id="prodSatuan" class="form-select" required>
+                                    <option value="Pouch">Pouch</option>
+                                    <option value="Gram">Gram (gr)</option>
+                                    <option value="Ons">Ons (100gr)</option>
+                                    <option value="Bungkus">Bungkus</option>
+                                    <option value="Buku">Buku (Papir)</option>
+                                    <option value="Slop">Slop / Pack</option>
+                                    <option value="Pcs">Pcs / Buah</option>
+                                    <option value="Paket">Paket Bundling</option>
+                                </select>
+                            </div>
+
+                            <!-- Input Harga -->
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-semibold">Harga Modal / HPP (Rp) <span class="text-danger">*</span></label>
+                                <input type="number" id="prodHargaModal" class="form-control" min="0" required value="0">
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-semibold">Harga Jual Ecer (Rp) <span class="text-danger">*</span></label>
+                                <input type="number" id="prodHargaEcer" class="form-control" min="0" required value="0">
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-semibold">Harga Jual Grosir (Rp)</label>
+                                <input type="number" id="prodHargaGrosir" class="form-control" min="0" required value="0">
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label small fw-semibold">Min. Qty Grosir</label>
+                                <input type="number" id="prodMinGrosir" class="form-control" min="0" required value="5">
+                                <div class="form-text" style="font-size: 0.7rem;">Isi 0 jika tanpa grosir</div>
+                            </div>
+
+                            <!-- Stok -->
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Stok Saat Ini <span class="text-danger">*</span></label>
+                                <input type="number" id="prodStokSaatIni" class="form-control" min="0" required value="0">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold">Batas Stok Minimum (Peringatan) <span class="text-danger">*</span></label>
+                                <input type="number" id="prodBatasStokMin" class="form-control" min="0" required value="5">
+                            </div>
+
+                            <!-- Upload Foto Produk dengan Kompresi Otomatis -->
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Upload Foto Produk (Otomatis Kompresi Maks 800px, JPEG 70%)</label>
+                                <input type="file" id="prodFotoInput" class="form-control" accept="image/*">
+                                <div class="d-flex align-items-center gap-3 mt-2" id="previewFotoContainer">
+                                    <img id="prodFotoPreview" src="https://placehold.co/100x100/2C221E/D4AF37?text=No+Image" alt="Preview" class="rounded border" style="width: 72px; height: 72px; object-fit: cover;">
+                                    <div class="small text-muted" id="infoKompresiFoto">
+                                        Pilih gambar untuk dikompres otomatis di sisi browser sebelum diunggah ke bucket <code>produk-images</code>.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-gold fw-bold" id="btnSimpanProduk">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Simpan Produk
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         MODAL 2: STRUK PEMBAYARAN (58MM THERMAL & WHATSAPP)
+    ========================================================== -->
+    <div class="modal fade" id="modalStruk" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-espresso text-white py-2">
+                    <h6 class="modal-title fw-bold text-gold"><i class="fa-solid fa-receipt me-2"></i>Struk Pembayaran</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light d-flex justify-content-center p-3">
+                    <!-- Area Cetak Struk Thermal 58mm -->
+                    <div id="areaCetakStruk" class="thermal-receipt-58mm bg-white p-3 shadow-sm">
+                        <div class="text-center mb-2">
+                            <div class="fw-bold receipt-title" id="strukNamaToko">GARASI BAKO & TINGWE</div>
+                            <div class="receipt-small" id="strukAlamatToko">Jl. Veteran No. 45, Kota Bandung</div>
+                            <div class="receipt-small" id="strukTeleponToko">Telp/WA: 081234567890</div>
+                        </div>
+
+                        <div class="receipt-divider">--------------------------------</div>
+
+                        <div class="receipt-meta receipt-small">
+                            <div class="d-flex justify-content-between">
+                                <span>No: <strong id="strukNoNota">-</strong></span>
+                                <span id="strukMetodeBayar">Tunai</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span id="strukTanggal">-</span>
+                            </div>
+                            <div>Plg: <span id="strukPelanggan">Pelanggan Umum</span></div>
+                        </div>
+
+                        <div class="receipt-divider">--------------------------------</div>
+
+                        <!-- Item List -->
+                        <div id="strukItemList" class="receipt-items receipt-small"></div>
+
+                        <div class="receipt-divider">--------------------------------</div>
+
+                        <!-- Totals -->
+                        <div class="receipt-totals receipt-small">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal</span>
+                                <span id="strukSubtotal">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between" id="strukRowDiskon">
+                                <span>Diskon</span>
+                                <span id="strukDiskon">-Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold receipt-total-big my-1">
+                                <span>TOTAL</span>
+                                <span id="strukTotalAkhir">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Bayar</span>
+                                <span id="strukUangDiterima">Rp 0</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Kembali</span>
+                                <span id="strukKembalian">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <div class="receipt-divider">--------------------------------</div>
+
+                        <div class="text-center receipt-small mt-1" id="strukFooter">
+                            Terima kasih telah berbelanja!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer flex-column gap-2 bg-white">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-success text-white"><i class="fa-brands fa-whatsapp"></i></span>
+                        <input type="text" id="strukInputWa" class="form-control" placeholder="Nomor WA Pelanggan (misal: 08123456789)">
+                        <button class="btn btn-success fw-semibold" type="button" id="btnKirimWaStruk">
+                            Kirim Struk WA
+                        </button>
+                    </div>
+                    <div class="d-flex w-100 gap-2">
+                        <button type="button" class="btn btn-espresso flex-fill fw-bold" id="btnCetakStrukThermal">
+                            <i class="fa-solid fa-print me-1"></i> Cetak Struk (58mm)
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         SCRIPTS (CDN)
+    ========================================================== -->
+    <!-- jQuery (Dibutuhkan oleh DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap 5.3 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.2/dist/sweetalert2.all.min.js"></script>
+    <!-- SheetJS (xlsx) untuk Export Laporan Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Supabase JS SDK v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Main Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
